@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice Audit Intelligence — Mosaic Finance</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+:root{
+  --bg:#F4F6FA;--surface:#fff;--surface2:#F8F9FB;--border:#E5E7EB;
+  --text:#111827;--muted:#6B7280;--muted2:#9CA3AF;
+  --red:#DC2626;--red-bg:#FEF2F2;--red-bd:#FECACA;
+  --amber:#D97706;--amber-bg:#FFFBEB;--amber-bd:#FDE68A;
+  --green:#059669;--green-bg:#ECFDF5;--green-bd:#A7F3D0;
+  --blue:#2563EB;--blue-bg:#EFF6FF;--blue-bd:#BFDBFE;
+  --purple:#7C3AED;--purple-bg:#F5F3FF;--purple-bd:#DDD6FE;
+  --sw:230px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* LAYOUT */
+.wrap{display:flex;min-height:100vh}
+.sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);position:fixed;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:200;overflow-y:auto}
+.main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column}
+
+/* SIDEBAR */
+.sb-brand{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
+.sb-brand-name{font-size:15px;font-weight:700;letter-spacing:-0.01em}
+.sb-brand-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.sb-section{padding:20px 16px 6px;font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:0.1em}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 8px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:background 0.12s,color 0.12s;user-select:none}
+.sb-item:hover{background:var(--bg);color:var(--text)}
+.sb-item.on{background:var(--blue-bg);color:var(--blue)}
+.sb-icon{font-size:13px;width:18px;text-align:center;flex-shrink:0}
+.sb-badge{margin-left:auto;font-size:10px;font-weight:700;background:var(--red-bg);color:var(--red);padding:1px 6px;border-radius:10px;min-width:20px;text-align:center}
+.sb-foot{margin-top:auto;padding:16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted2)}
+
+/* TOPBAR */
+.topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-title{font-size:14px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.status-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--bg);padding:5px 12px;border-radius:20px;border:1px solid var(--border)}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.sdot.demo{background:var(--amber)}
+.api-btn{font-size:12px;font-weight:500;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all 0.12s}
+.api-btn:hover{background:var(--bg);color:var(--text)}
+.api-btn.loading{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+
+/* CONTENT */
+.content{padding:24px 28px;flex:1}
+.page{display:none}.page.on{display:block}
+
+/* KPIS */
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+.kpi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.kpi-lbl{font-size:12px;font-weight:500;color:var(--muted)}
+.kpi-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.kpi-val{font-size:24px;font-weight:700;letter-spacing:-0.02em;line-height:1.1}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:5px}
+.kpi.red .kpi-ico{background:var(--red-bg)}.kpi.red .kpi-val{color:var(--red)}
+.kpi.amber .kpi-ico{background:var(--amber-bg)}.kpi.amber .kpi-val{color:var(--amber)}
+.kpi.green .kpi-ico{background:var(--green-bg)}.kpi.green .kpi-val{color:var(--green)}
+.kpi.blue .kpi-ico{background:var(--blue-bg)}.kpi.blue .kpi-val{color:var(--blue)}
+.kpi.purple .kpi-ico{background:var(--purple-bg)}.kpi.purple .kpi-val{color:var(--purple)}
+
+/* SECTION */
+.sec{margin-bottom:24px}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-title{font-size:14px;font-weight:600}
+.sec-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.cnt-badge{font-size:11px;font-weight:600;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:3px 10px;border-radius:12px}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.card-p{padding:20px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* ALERTS */
+.alert{display:flex;gap:12px;padding:12px 16px;border-radius:8px;margin-bottom:8px;font-size:13px;line-height:1.6;align-items:flex-start}
+.alert.danger{background:var(--red-bg);border:1px solid var(--red-bd);color:#991B1B}
+.alert.warning{background:var(--amber-bg);border:1px solid var(--amber-bd);color:#92400E}
+.alert.ai{background:var(--purple-bg);border:1px solid var(--purple-bd);color:#5B21B6}
+.alert-icon{font-size:14px;margin-top:2px;flex-shrink:0}
+
+/* BAR CHART */
+.bar-chart{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:grid;grid-template-columns:170px 1fr 110px;align-items:center;gap:12px}
+.bar-lbl{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;border:1px solid var(--border)}
+.bar-fill{height:100%;border-radius:4px;background:var(--red);transition:width 1s cubic-bezier(.4,0,.2,1)}
+.bar-fill.green{background:var(--green)}
+.bar-amt{font-size:12px;font-weight:600;color:var(--red);text-align:right}
+
+/* TABLE */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{border-bottom:1px solid var(--border)}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;background:var(--surface2);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#FAFBFC}
+.mono{font-family:'SF Mono','Fira Code',monospace;font-size:12px;color:var(--muted)}
+
+/* BADGES */
+.b{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:0.03em;white-space:nowrap}
+.b.over{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.b.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.b.gst{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.b.edge{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.b.ai{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-bd)}
+.rH{color:var(--red);font-weight:700}.rM{color:var(--amber);font-weight:700}.rL{color:var(--green);font-weight:700}
+
+/* VENDOR TABS */
+.vtabs{display:flex;gap:2px;flex-wrap:wrap;padding:4px;background:var(--bg);border-radius:8px;margin-bottom:0}
+.vtab{padding:6px 13px;border-radius:6px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;border:none;background:transparent;transition:all 0.12s;white-space:nowrap;font-family:inherit}
+.vtab.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.vpane{display:none}.vpane.on{display:block}
+
+/* MINI CARDS */
+.mini-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:18px;border-bottom:1px solid var(--border)}
+.mini{background:var(--bg);border-radius:8px;padding:13px 14px}
+.mini-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+.mini-val{font-size:17px;font-weight:700}
+
+/* GST SLABS */
+.slab-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px}
+.slab{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center}
+.slab-pct{font-size:30px;font-weight:700;color:var(--amber);letter-spacing:-0.02em}
+.slab-cnt{font-size:12px;color:var(--muted);margin-top:4px}
+.slab-status{font-size:12px;font-weight:600;margin-top:8px}
+.slab-status.err{color:var(--red)}.slab-status.ok{color:var(--green)}
+
+/* EMPTY */
+.empty{padding:28px;text-align:center;color:var(--muted);font-size:13px}
+
+/* PROGRESS BAR (live API fetch) */
+.prog-wrap{width:100%;height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.prog-bar{height:100%;background:var(--blue);width:0%;transition:width 0.3s}
+#fetch-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.3);z-index:999;align-items:center;justify-content:center}
+#fetch-modal.show{display:flex}
+.fetch-card{background:var(--surface);border-radius:12px;padding:28px 32px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.fetch-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.fetch-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.fetch-lbl{font-size:12px;color:var(--muted);text-align:center}
+.fetch-cancel{width:100%;margin-top:14px;padding:8px;background:none;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--muted);cursor:pointer;font-family:inherit}
+.fetch-cancel:hover{background:var(--bg)}
+</style>
+</head>
+<body>
+
+<!-- LIVE FETCH MODAL (only shown when user clicks "Load Live Data") -->
+<div id="fetch-modal">
+  <div class="fetch-card">
+    <div class="fetch-title">Fetching live data</div>
+    <div class="fetch-sub">Connecting to mosaicfellowship.in API</div>
+    <div class="prog-wrap"><div class="prog-bar" id="fpb"></div></div>
+    <div class="fetch-lbl" id="flbl">Starting...</div>
+    <button class="fetch-cancel" onclick="cancelFetch()">Cancel</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-name">Mosaic Finance</div>
+      <div class="sb-brand-sub">Invoice Audit Intelligence</div>
+    </div>
+
+    <div class="sb-section">Overview</div>
+    <div class="sb-item on" id="nav-summary" onclick="go('summary')"><span class="sb-icon">◈</span>Summary</div>
+    <div class="sb-item" id="nav-alerts" onclick="go('alerts')"><span class="sb-icon">◉</span>Alerts<span class="sb-badge" id="alert-badge" style="display:none"></span></div>
+
+    <div class="sb-section">Audit Findings</div>
+    <div class="sb-item" id="nav-overcharges" onclick="go('overcharges')"><span class="sb-icon">▲</span>Overcharges</div>
+    <div class="sb-item" id="nav-gst" onclick="go('gst')"><span class="sb-icon">◐</span>GST Errors</div>
+    <div class="sb-item" id="nav-risk" onclick="go('risk')"><span class="sb-icon">◆</span>Vendor Risk</div>
+    <div class="sb-item" id="nav-edge" onclick="go('edge')"><span class="sb-icon">◇</span>Edge Cases</div>
+    <div class="sb-item" id="nav-ai" onclick="go('ai')"><span class="sb-icon">✦</span>AI Anomalies</div>
+
+    <div class="sb-section">Detail</div>
+    <div class="sb-item" id="nav-vendors" onclick="go('vendors')"><span class="sb-icon">▣</span>Vendor Detail</div>
+    <div class="sb-item" id="nav-slabs" onclick="go('slabs')"><span class="sb-icon">◫</span>GST Slabs</div>
+
+    <div class="sb-foot">v3.1 · Mosaic Wellness</div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title" id="page-title">Summary</span>
+        <span id="data-note" style="font-size:11px;color:var(--muted);background:var(--amber-bg);color:var(--amber);padding:2px 8px;border-radius:10px;border:1px solid var(--amber-bd)">Sample data</span>
+      </div>
+      <div class="topbar-right">
+        <div class="status-pill"><span class="sdot demo" id="sdot"></span><span id="stext">Sample data · 59 line items</span></div>
+        <button class="api-btn" id="api-btn" onclick="loadLive()">Load Live Data</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- SUMMARY -->
+      <div class="page on" id="pg-summary">
+        <div class="kpi-row" id="kpi-row"></div>
+        <div class="sec">
+          <div class="sec-hd"><div><div class="sec-title">Overcharge by vendor</div><div class="sec-sub">Total amount overcharged, ranked highest to lowest</div></div></div>
+          <div class="card card-p" id="bar-chart"></div>
+        </div>
+        <div class="two-col">
+          <div class="sec">
+            <div class="sec-hd"><div class="sec-title">Top discrepancies</div></div>
+            <div class="card"><div class="tw"><table><thead><tr><th>Invoice</th><th>Vendor</th><th>Item</th><th>Diff</th><th>Status</th></tr></thead><tbody id="disc-mini"></tbody></table></div></div>
+          </div>
+          <div class="sec">
+            <div class="sec-hd"><div class="sec-title">GST errors</div></div>
+            <div class="card"><div class="tw"><table><thead><tr><th>Invoice</th><th>Vendor</th><th>Item</th><th>Billed</th><th>Correct</th></tr></thead><tbody id="gst-mini"></tbody></table></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="page" id="pg-alerts">
+        <div class="sec">
+          <div class="sec-hd"><div><div class="sec-title">System Alerts</div><div class="sec-sub">Auto-generated from audit findings and AI anomaly detection</div></div></div>
+          <div id="alerts-body"></div>
+        </div>
+      </div>
+
+      <!-- OVERCHARGES -->
+      <div class="page" id="pg-overcharges">
+        <div class="sec">
+          <div class="sec-hd"><div><div class="sec-title">All billing discrepancies</div><div class="sec-sub">Line items where billed amount exceeds contracted rate</div></div><span class="cnt-badge" id="cnt-over"></span></div>
+          <div class="card"><div class="tw"><table><thead><tr><th>Invoice</th><th>Vendor</th><th>Item</th><th>Qty</th><th>Billed rate</th><th>Contract rate</th><th>Diff %</th><th>Overcharge</th></tr></thead><tbody id="over-body"></tbody></table></div></div>
+        </div>
+      </div>
+
+      <!-- GST -->
+      <div class="page" id="pg-gst">
+        <div class="sec">
+          <div class="sec-hd"><div><div class="sec-title">GST rate mismatches</div><div class="sec-sub">Where billed GST % differs from the contracted rate</div></div><span class="cnt-badge" id="cnt-gst"></span></div>
+          <div class="card"><div class="tw"><table><thead><tr><th>Invoice</th><th>Vendor</th><th>Item</th><th>Billed GST</th><th>Correct GST</th><th>Billed amount</th><th>Extra GST paid</th></tr></thead><tbody id="gst-body"></tbody></table></div></div>
+        </div>
+      </div>
+
+      <!-- RISK -->
+      <div class="page" id="pg-risk">
+        <div class="sec">
+          <div class="sec-hd"><div><div class="sec-title">Vendor risk ranking</div><div class="sec-sub">Scored by total number and severity of billing issues</div></div></div>
+          <div class="card"><div class="tw"><table><thead><tr><th>Vendor</th><th>Total issues</th><th>Price flags</th><th>GST errors</th><th>Duplicates</th><th>Total overcharge</th><th>Risk level</th></tr></thead><tbody id="risk-body"></tbody></table></div></div>
+        </div>
+      </div>
+
+      <!-- EDGE -->
+      <div class="page" id="pg-edge">
+        <div class="sec">
+          <div class="sec-hd"><div><div class="sec-title">Edge cases detected</div><div class="sec-sub">Duplicate billings, missing rate card entries, invalid quantities</div></div><span class="cnt-badge" id="cnt-edge"></span></div>
+          <div class="card"><div class="tw"><table><thead><tr><th>Type</th><th>Invoice</th><th>Vendor</th><th>Item</th><th>Detail</th></tr></thead><tbody id="edge-body"></tbody></table></div></div>
+        </div>
+      </div>
+
+      <!-- AI -->
+      <div class="page" id="pg-ai">
+        <div class="sec">
+          <div class="sec-hd"><div><div class="sec-title">AI anomaly detection</div><div class="sec-sub">Statistical outliers flagged using Z-score method (threshold &gt; 2.5σ)</div></div><span class="cnt-badge" id="cnt-ai"></span></div>
+          <div class="card"><div class="tw"><table><thead><tr><th>Vendor</th><th>Invoice</th><th>Item</th><th>Billed amount</th><th>Vendor avg</th><th>Z-score</th><th>Flag</th></tr></thead><tbody id="ai-body"></tbody></table></div></div>
+        </div>
+      </div>
+
+      <!-- VENDORS -->
+      <div class="page" id="pg-vendors">
+        <div class="sec">
+          <div class="sec-hd"><div><div class="sec-title">Vendor detail</div><div class="sec-sub">Select a vendor to view their invoices and audit summary</div></div></div>
+          <div class="card card-p" style="padding-bottom:0;padding:12px 12px 0"><div class="vtabs" id="vtabs"></div></div>
+          <div class="card" style="margin-top:8px;overflow:hidden" id="vpanes"></div>
+        </div>
+      </div>
+
+      <!-- SLABS -->
+      <div class="page" id="pg-slabs">
+        <div class="sec">
+          <div class="sec-hd"><div class="sec-title">GST slab breakdown</div></div>
+          <div class="slab-grid" id="slab-grid"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   EMBEDDED DATA  (real page-1 data from your API)
+   The full live fetch is available via "Load Live Data" button
+═══════════════════════════════════════════════════════════ */
+const S_INV=[
+  {invoice_id:"INV-00001",vendor_id:"V13",vendor_name:"PixelCraft Studios",invoice_date:"2025-09-01",subtotal:17164853.7,gst_amount:3509656.92,total:20674510.62,payment_terms:"Net 60"},
+  {invoice_id:"INV-00002",vendor_id:"V05",vendor_name:"Ashok Packaging",invoice_date:"2025-06-08",subtotal:10677.1,gst_amount:1921.88,total:12598.98,payment_terms:"Net 30"},
+  {invoice_id:"INV-00003",vendor_id:"V02",vendor_name:"BlueDart",invoice_date:"2025-09-28",subtotal:54993.81,gst_amount:11309.14,total:66302.95,payment_terms:"Net 45"},
+  {invoice_id:"INV-00004",vendor_id:"V03",vendor_name:"Ecom Express",invoice_date:"2025-05-27",subtotal:28528.47,gst_amount:5135.12,total:33663.59,payment_terms:"Net 60"},
+  {invoice_id:"INV-00005",vendor_id:"V07",vendor_name:"Naveen Corrugators",invoice_date:"2025-03-17",subtotal:68062.68,gst_amount:8167.52,total:76230.2,payment_terms:"Net 60"},
+  {invoice_id:"INV-00006",vendor_id:"V06",vendor_name:"Sri Lakshmi Plastics",invoice_date:"2025-12-13",subtotal:52516.31,gst_amount:7917.09,total:60433.4,payment_terms:"Net 30"},
+  {invoice_id:"INV-00007",vendor_id:"V09",vendor_name:"Kaival Nutra",invoice_date:"2025-06-06",subtotal:136486.42,gst_amount:19361.8,total:155848.22,payment_terms:"Net 45"},
+  {invoice_id:"INV-00008",vendor_id:"V15",vendor_name:"CloudNine Ads",invoice_date:"2025-07-15",subtotal:7036359.04,gst_amount:1266544.63,total:8302903.67,payment_terms:"Net 30"},
+  {invoice_id:"INV-00009",vendor_id:"V10",vendor_name:"Primus Biotech",invoice_date:"2025-08-26",subtotal:245171.14,gst_amount:17038.13,total:262209.27,payment_terms:"Net 45"},
+  {invoice_id:"INV-00010",vendor_id:"V08",vendor_name:"Sai Pharma",invoice_date:"2025-11-04",subtotal:791181.8,gst_amount:99672.99,total:890854.79,payment_terms:"Net 30"},
+  {invoice_id:"INV-00011",vendor_id:"V07",vendor_name:"Naveen Corrugators",invoice_date:"2025-11-13",subtotal:17416.76,gst_amount:2885.53,total:20302.29,payment_terms:"Net 30"},
+  {invoice_id:"INV-00012",vendor_id:"V13",vendor_name:"PixelCraft Studios",invoice_date:"2025-08-11",subtotal:11607688.14,gst_amount:2089383.87,total:13697072.01,payment_terms:"Net 30"},
+  {invoice_id:"INV-00013",vendor_id:"V14",vendor_name:"Brandwise Digital",invoice_date:"2025-03-04",subtotal:6969946.23,gst_amount:1254590.32,total:8224536.55,payment_terms:"Net 60"},
+  {invoice_id:"INV-00014",vendor_id:"V06",vendor_name:"Sri Lakshmi Plastics",invoice_date:"2025-10-02",subtotal:59349.3,gst_amount:7121.92,total:66471.22,payment_terms:"Net 45"},
+  {invoice_id:"INV-00015",vendor_id:"V10",vendor_name:"Primus Biotech",invoice_date:"2025-03-23",subtotal:915438.75,gst_amount:119479.52,total:1034918.27,payment_terms:"Net 60"},
+  {invoice_id:"INV-00016",vendor_id:"V12",vendor_name:"DigiBoost Media",invoice_date:"2025-11-10",subtotal:5706699.82,gst_amount:1027205.97,total:6733905.79,payment_terms:"Net 30"},
+  {invoice_id:"INV-00017",vendor_id:"V11",vendor_name:"Herb Valley",invoice_date:"2025-09-03",subtotal:465416.19,gst_amount:66026.31,total:531442.5,payment_terms:"Net 30"},
+  {invoice_id:"INV-00022",vendor_id:"V14",vendor_name:"Brandwise Digital",invoice_date:"2025-02-02",subtotal:5275379.31,gst_amount:949568.28,total:6224947.59,payment_terms:"Net 45"},
+  {invoice_id:"INV-00023",vendor_id:"V04",vendor_name:"Xpressbees",invoice_date:"2025-10-05",subtotal:102814.61,gst_amount:18506.63,total:121321.24,payment_terms:"Net 45"},
+  {invoice_id:"INV-00051",vendor_id:"V01",vendor_name:"Delhivery",invoice_date:"2025-09-17",subtotal:55289.35,gst_amount:9952.08,total:65241.43,payment_terms:"Net 30"}
+];
+const S_LI=[
+  {invoice_id:"INV-00001",vendor_id:"V13",item_name:"Email campaign",quantity:93,unit_price:45159.49,billed_amount:4199832.57,billed_gst_rate:28},
+  {invoice_id:"INV-00001",vendor_id:"V13",item_name:"Google Ads",quantity:56,unit_price:27946.32,billed_amount:1564993.92,billed_gst_rate:18},
+  {invoice_id:"INV-00001",vendor_id:"V13",item_name:"Influencer campaign",quantity:87,unit_price:44208.16,billed_amount:3846109.92,billed_gst_rate:18},
+  {invoice_id:"INV-00001",vendor_id:"V13",item_name:"Video production",quantity:84,unit_price:35600.63,billed_amount:2990452.92,billed_gst_rate:18},
+  {invoice_id:"INV-00001",vendor_id:"V13",item_name:"Email campaign",quantity:37,unit_price:45159.49,billed_amount:1670901.13,billed_gst_rate:18},
+  {invoice_id:"INV-00001",vendor_id:"V13",item_name:"SEO services",quantity:11,unit_price:33278.42,billed_amount:366062.62,billed_gst_rate:18},
+  {invoice_id:"INV-00001",vendor_id:"V13",item_name:"Meta ad spend",quantity:62,unit_price:40750.01,billed_amount:2526500.62,billed_gst_rate:18},
+  {invoice_id:"INV-00002",vendor_id:"V05",item_name:"Air pillows",quantity:86,unit_price:61.64,billed_amount:5301.04,billed_gst_rate:18},
+  {invoice_id:"INV-00002",vendor_id:"V05",item_name:"Tape rolls",quantity:18,unit_price:298.67,billed_amount:5376.06,billed_gst_rate:18},
+  {invoice_id:"INV-00003",vendor_id:"V02",item_name:"COD handling",quantity:51,unit_price:276.52,billed_amount:14102.52,billed_gst_rate:28},
+  {invoice_id:"INV-00003",vendor_id:"V02",item_name:"Freight Zone A",quantity:69,unit_price:137.79,billed_amount:9507.51,billed_gst_rate:18},
+  {invoice_id:"INV-00003",vendor_id:"V02",item_name:"Freight Zone B",quantity:71,unit_price:110.37,billed_amount:7836.27,billed_gst_rate:18},
+  {invoice_id:"INV-00003",vendor_id:"V02",item_name:"RTO charges",quantity:3,unit_price:373.77,billed_amount:1121.31,billed_gst_rate:18},
+  {invoice_id:"INV-00003",vendor_id:"V02",item_name:"RTO charges",quantity:44,unit_price:373.77,billed_amount:16445.88,billed_gst_rate:18},
+  {invoice_id:"INV-00004",vendor_id:"V03",item_name:"Freight Zone A",quantity:7,unit_price:246.55,billed_amount:1725.85,billed_gst_rate:18},
+  {invoice_id:"INV-00004",vendor_id:"V03",item_name:"RTO charges",quantity:39,unit_price:293.99,billed_amount:11465.61,billed_gst_rate:18},
+  {invoice_id:"INV-00005",vendor_id:"V07",item_name:"Air pillows",quantity:92,unit_price:249.76,billed_amount:22977.92,billed_gst_rate:12},
+  {invoice_id:"INV-00005",vendor_id:"V07",item_name:"Bubble wrap",quantity:81,unit_price:277.21,billed_amount:22454.01,billed_gst_rate:12},
+  {invoice_id:"INV-00005",vendor_id:"V07",item_name:"Corrugated boxes",quantity:43,unit_price:145.25,billed_amount:6245.75,billed_gst_rate:12},
+  {invoice_id:"INV-00006",vendor_id:"V06",item_name:"Shrink wrap",quantity:57,unit_price:295.24,billed_amount:16828.68,billed_gst_rate:12},
+  {invoice_id:"INV-00006",vendor_id:"V06",item_name:"Bubble wrap",quantity:45,unit_price:194.86,billed_amount:8768.7,billed_gst_rate:12},
+  {invoice_id:"INV-00006",vendor_id:"V06",item_name:"Corrugated boxes",quantity:46,unit_price:18.61,billed_amount:856.06,billed_gst_rate:18},
+  {invoice_id:"INV-00006",vendor_id:"V06",item_name:"Printed boxes",quantity:88,unit_price:161.14,billed_amount:14180.32,billed_gst_rate:18},
+  {invoice_id:"INV-00007",vendor_id:"V09",item_name:"Collagen peptides",quantity:2,unit_price:804.72,billed_amount:1609.44,billed_gst_rate:12},
+  {invoice_id:"INV-00007",vendor_id:"V09",item_name:"Melatonin",quantity:12,unit_price:4143.65,billed_amount:49723.8,billed_gst_rate:18},
+  {invoice_id:"INV-00007",vendor_id:"V09",item_name:"Minoxidil 5%",quantity:53,unit_price:1369.62,billed_amount:72589.86,billed_gst_rate:12},
+  {invoice_id:"INV-00007",vendor_id:"V09",item_name:"Zinc gluconate",quantity:44,unit_price:285.53,billed_amount:12563.32,billed_gst_rate:12},
+  {invoice_id:"INV-00008",vendor_id:"V15",item_name:"Email campaign",quantity:70,unit_price:30734.65,billed_amount:2151425.5,billed_gst_rate:18},
+  {invoice_id:"INV-00008",vendor_id:"V15",item_name:"Creative production",quantity:72,unit_price:25704.99,billed_amount:1850759.28,billed_gst_rate:18},
+  {invoice_id:"INV-00008",vendor_id:"V15",item_name:"SEO services",quantity:78,unit_price:38899.67,billed_amount:3034174.26,billed_gst_rate:18},
+  {invoice_id:"INV-00009",vendor_id:"V10",item_name:"Zinc gluconate",quantity:13,unit_price:1707.55,billed_amount:22198.15,billed_gst_rate:18},
+  {invoice_id:"INV-00009",vendor_id:"V10",item_name:"Melatonin",quantity:16,unit_price:1180.24,billed_amount:18883.84,billed_gst_rate:12},
+  {invoice_id:"INV-00009",vendor_id:"V10",item_name:"Biotin powder",quantity:96,unit_price:2080.1,billed_amount:199689.6,billed_gst_rate:5},
+  {invoice_id:"INV-00010",vendor_id:"V08",item_name:"Hyaluronic acid",quantity:26,unit_price:800.73,billed_amount:20818.98,billed_gst_rate:12},
+  {invoice_id:"INV-00010",vendor_id:"V08",item_name:"Minoxidil 5%",quantity:27,unit_price:2920.48,billed_amount:78852.96,billed_gst_rate:18},
+  {invoice_id:"INV-00010",vendor_id:"V08",item_name:"Melatonin",quantity:98,unit_price:3564.99,billed_amount:349369.02,billed_gst_rate:12},
+  {invoice_id:"INV-00010",vendor_id:"V08",item_name:"Ashwagandha KSM-66",quantity:37,unit_price:502.01,billed_amount:18574.37,billed_gst_rate:12},
+  {invoice_id:"INV-00010",vendor_id:"V08",item_name:"Biotin powder",quantity:96,unit_price:1694.36,billed_amount:162658.56,billed_gst_rate:12},
+  {invoice_id:"INV-00011",vendor_id:"V07",item_name:"Printed boxes",quantity:27,unit_price:240.31,billed_amount:6488.37,billed_gst_rate:18},
+  {invoice_id:"INV-00011",vendor_id:"V07",item_name:"Bubble wrap",quantity:15,unit_price:277.21,billed_amount:4158.15,billed_gst_rate:12},
+  {invoice_id:"INV-00012",vendor_id:"V13",item_name:"Influencer campaign",quantity:27,unit_price:44208.16,billed_amount:1193620.32,billed_gst_rate:18},
+  {invoice_id:"INV-00012",vendor_id:"V13",item_name:"Creative production",quantity:63,unit_price:49310.14,billed_amount:3106538.82,billed_gst_rate:18},
+  {invoice_id:"INV-00013",vendor_id:"V14",item_name:"Email campaign",quantity:74,unit_price:14744.17,billed_amount:1091068.58,billed_gst_rate:18},
+  {invoice_id:"INV-00013",vendor_id:"V14",item_name:"SEO services",quantity:24,unit_price:40685.8,billed_amount:976459.2,billed_gst_rate:18},
+  {invoice_id:"INV-00013",vendor_id:"V14",item_name:"Creative production",quantity:45,unit_price:27737.37,billed_amount:1248181.65,billed_gst_rate:18},
+  {invoice_id:"INV-00013",vendor_id:"V14",item_name:"Meta ad spend",quantity:19,unit_price:48905.27,billed_amount:929200.13,billed_gst_rate:18},
+  {invoice_id:"INV-00015",vendor_id:"V10",item_name:"Minoxidil 5%",quantity:100,unit_price:3068.62,billed_amount:306862,billed_gst_rate:12},
+  {invoice_id:"INV-00015",vendor_id:"V10",item_name:"Ashwagandha KSM-66",quantity:6,unit_price:1417.32,billed_amount:8503.92,billed_gst_rate:12},
+  {invoice_id:"INV-00015",vendor_id:"V10",item_name:"Hyaluronic acid",quantity:87,unit_price:3376.82,billed_amount:293783.34,billed_gst_rate:18},
+  {invoice_id:"INV-00015",vendor_id:"V10",item_name:"Biotin powder",quantity:56,unit_price:2080.1,billed_amount:116485.6,billed_gst_rate:5},
+  {invoice_id:"INV-00016",vendor_id:"V12",item_name:"Video production",quantity:72,unit_price:46080.11,billed_amount:3317767.92,billed_gst_rate:18},
+  {invoice_id:"INV-00016",vendor_id:"V12",item_name:"Google Ads",quantity:77,unit_price:19485.98,billed_amount:1500420.46,billed_gst_rate:18},
+  {invoice_id:"INV-00016",vendor_id:"V12",item_name:"Meta ad spend",quantity:38,unit_price:23381.88,billed_amount:888511.44,billed_gst_rate:18},
+  {invoice_id:"INV-00017",vendor_id:"V11",item_name:"Ashwagandha KSM-66",quantity:89,unit_price:1634.31,billed_amount:145453.59,billed_gst_rate:12},
+  {invoice_id:"INV-00017",vendor_id:"V11",item_name:"Melatonin",quantity:56,unit_price:3028.68,billed_amount:169606.08,billed_gst_rate:18},
+  {invoice_id:"INV-00022",vendor_id:"V14",item_name:"Email campaign",quantity:45,unit_price:14744.17,billed_amount:663487.65,billed_gst_rate:18},
+  {invoice_id:"INV-00022",vendor_id:"V14",item_name:"SEO services",quantity:28,unit_price:40685.8,billed_amount:1139202.4,billed_gst_rate:18},
+  {invoice_id:"INV-00022",vendor_id:"V14",item_name:"Influencer campaign",quantity:85,unit_price:29429.57,billed_amount:2501513.45,billed_gst_rate:18},
+  {invoice_id:"INV-00023",vendor_id:"V04",item_name:"Freight Zone C",quantity:77,unit_price:273.76,billed_amount:21079.52,billed_gst_rate:18},
+  {invoice_id:"INV-00023",vendor_id:"V04",item_name:"Freight Zone A",quantity:66,unit_price:188.83,billed_amount:12462.78,billed_gst_rate:18},
+  {invoice_id:"INV-00023",vendor_id:"V04",item_name:"RTO charges",quantity:93,unit_price:112.53,billed_amount:10465.29,billed_gst_rate:18}
+];
+const S_RC=[
+  {vendor_id:"V02",item_name:"Freight Zone A",contracted_rate:137.79,correct_gst_rate:18},
+  {vendor_id:"V02",item_name:"Freight Zone B",contracted_rate:110.37,correct_gst_rate:18},
+  {vendor_id:"V02",item_name:"COD handling",contracted_rate:276.52,correct_gst_rate:18},
+  {vendor_id:"V02",item_name:"RTO charges",contracted_rate:373.77,correct_gst_rate:18},
+  {vendor_id:"V03",item_name:"Freight Zone A",contracted_rate:246.55,correct_gst_rate:18},
+  {vendor_id:"V03",item_name:"RTO charges",contracted_rate:293.99,correct_gst_rate:18},
+  {vendor_id:"V04",item_name:"Freight Zone A",contracted_rate:188.83,correct_gst_rate:18},
+  {vendor_id:"V04",item_name:"Freight Zone C",contracted_rate:273.76,correct_gst_rate:18},
+  {vendor_id:"V04",item_name:"RTO charges",contracted_rate:112.53,correct_gst_rate:18},
+  {vendor_id:"V05",item_name:"Air pillows",contracted_rate:61.64,correct_gst_rate:18},
+  {vendor_id:"V05",item_name:"Tape rolls",contracted_rate:298.67,correct_gst_rate:18},
+  {vendor_id:"V06",item_name:"Corrugated boxes",contracted_rate:18.61,correct_gst_rate:18},
+  {vendor_id:"V06",item_name:"Bubble wrap",contracted_rate:194.86,correct_gst_rate:12},
+  {vendor_id:"V06",item_name:"Printed boxes",contracted_rate:161.14,correct_gst_rate:18},
+  {vendor_id:"V06",item_name:"Shrink wrap",contracted_rate:295.24,correct_gst_rate:12},
+  {vendor_id:"V07",item_name:"Air pillows",contracted_rate:249.76,correct_gst_rate:12},
+  {vendor_id:"V07",item_name:"Bubble wrap",contracted_rate:277.21,correct_gst_rate:12},
+  {vendor_id:"V07",item_name:"Corrugated boxes",contracted_rate:145.25,correct_gst_rate:12},
+  {vendor_id:"V07",item_name:"Printed boxes",contracted_rate:240.31,correct_gst_rate:18},
+  {vendor_id:"V08",item_name:"Hyaluronic acid",contracted_rate:800.73,correct_gst_rate:12},
+  {vendor_id:"V08",item_name:"Minoxidil 5%",contracted_rate:2920.48,correct_gst_rate:18},
+  {vendor_id:"V08",item_name:"Melatonin",contracted_rate:3564.99,correct_gst_rate:12},
+  {vendor_id:"V08",item_name:"Ashwagandha KSM-66",contracted_rate:502.01,correct_gst_rate:12},
+  {vendor_id:"V08",item_name:"Biotin powder",contracted_rate:1694.36,correct_gst_rate:12},
+  {vendor_id:"V09",item_name:"Collagen peptides",contracted_rate:804.72,correct_gst_rate:12},
+  {vendor_id:"V09",item_name:"Melatonin",contracted_rate:4143.65,correct_gst_rate:18},
+  {vendor_id:"V09",item_name:"Minoxidil 5%",contracted_rate:1369.62,correct_gst_rate:12},
+  {vendor_id:"V09",item_name:"Zinc gluconate",contracted_rate:285.53,correct_gst_rate:12},
+  {vendor_id:"V10",item_name:"Zinc gluconate",contracted_rate:1707.55,correct_gst_rate:18},
+  {vendor_id:"V10",item_name:"Melatonin",contracted_rate:1180.24,correct_gst_rate:12},
+  {vendor_id:"V10",item_name:"Biotin powder",contracted_rate:2080.1,correct_gst_rate:5},
+  {vendor_id:"V10",item_name:"Minoxidil 5%",contracted_rate:3068.62,correct_gst_rate:12},
+  {vendor_id:"V10",item_name:"Ashwagandha KSM-66",contracted_rate:1417.32,correct_gst_rate:12},
+  {vendor_id:"V10",item_name:"Hyaluronic acid",contracted_rate:3376.82,correct_gst_rate:18},
+  {vendor_id:"V11",item_name:"Ashwagandha KSM-66",contracted_rate:1634.31,correct_gst_rate:12},
+  {vendor_id:"V11",item_name:"Melatonin",contracted_rate:3028.68,correct_gst_rate:18},
+  {vendor_id:"V12",item_name:"Video production",contracted_rate:46080.11,correct_gst_rate:18},
+  {vendor_id:"V12",item_name:"Google Ads",contracted_rate:19485.98,correct_gst_rate:18},
+  {vendor_id:"V12",item_name:"Meta ad spend",contracted_rate:23381.88,correct_gst_rate:18},
+  {vendor_id:"V13",item_name:"Email campaign",contracted_rate:45159.49,correct_gst_rate:18},
+  {vendor_id:"V13",item_name:"Google Ads",contracted_rate:27946.32,correct_gst_rate:18},
+  {vendor_id:"V13",item_name:"Influencer campaign",contracted_rate:44208.16,correct_gst_rate:18},
+  {vendor_id:"V13",item_name:"Video production",contracted_rate:35600.63,correct_gst_rate:18},
+  {vendor_id:"V13",item_name:"SEO services",contracted_rate:33278.42,correct_gst_rate:18},
+  {vendor_id:"V13",item_name:"Meta ad spend",contracted_rate:40750.01,correct_gst_rate:18},
+  {vendor_id:"V13",item_name:"Creative production",contracted_rate:49310.14,correct_gst_rate:18},
+  {vendor_id:"V14",item_name:"Email campaign",contracted_rate:14744.17,correct_gst_rate:18},
+  {vendor_id:"V14",item_name:"SEO services",contracted_rate:40685.8,correct_gst_rate:18},
+  {vendor_id:"V14",item_name:"Creative production",contracted_rate:27737.37,correct_gst_rate:18},
+  {vendor_id:"V14",item_name:"Meta ad spend",contracted_rate:48905.27,correct_gst_rate:18},
+  {vendor_id:"V14",item_name:"Influencer campaign",contracted_rate:29429.57,correct_gst_rate:18},
+  {vendor_id:"V15",item_name:"Email campaign",contracted_rate:28000,correct_gst_rate:18},
+  {vendor_id:"V15",item_name:"Creative production",contracted_rate:24000,correct_gst_rate:18},
+  {vendor_id:"V15",item_name:"SEO services",contracted_rate:36000,correct_gst_rate:18}
+];
+
+/* ═══════════════════════════════════════════════════════════
+   FORMATTERS
+═══════════════════════════════════════════════════════════ */
+function R(n){
+  if(n==null||isNaN(n))return'—';
+  const a=Math.abs(n);
+  if(a>=1e7)return'₹'+(n/1e7).toFixed(2)+' Cr';
+  if(a>=1e5)return'₹'+(n/1e5).toFixed(2)+'L';
+  return'₹'+Math.round(n).toLocaleString('en-IN');
+}
+function Rf(n){return n!=null?'₹'+Number(n).toFixed(2):'—'}
+
+/* ═══════════════════════════════════════════════════════════
+   AUDIT ENGINE
+═══════════════════════════════════════════════════════════ */
+function audit(invoices,lineItems,rateCard){
+  const rm={};rateCard.forEach(r=>{rm[r.vendor_id+'|'+r.item_name]=r});
+  const im={};invoices.forEach(i=>{im[i.invoice_id]=i});
+  const A={
+    totalOvercharge:0,gstErrors:0,cleanCount:0,
+    disc:[],gstM:[],edges:[],alerts:[],
+    vRisk:{},vOver:{},vTotal:{}
+  };
+  function ev(v){if(!A.vRisk[v])A.vRisk[v]={issues:0,pf:0,ge:0,dup:0,over:0}}
+
+  const seen=new Set();
+  for(const li of lineItems){
+    const rate=rm[li.vendor_id+'|'+li.item_name];
+    const inv=im[li.invoice_id];
+    const v=inv?inv.vendor_name:li.vendor_id;
+    A.vTotal[v]=(A.vTotal[v]||0)+li.billed_amount;
+
+    // zero qty
+    if((li.quantity===0||li.quantity==null)&&li.billed_amount>0){
+      ev(v);A.vRisk[v].issues++;
+      A.edges.push({type:'Invalid Qty',invoice:li.invoice_id,vendor:v,item:li.item_name,detail:`Qty=${li.quantity}, amount=${R(li.billed_amount)}`});
+    }
+    // duplicate
+    const dk=li.invoice_id+'|'+li.item_name+'|'+li.quantity;
+    if(seen.has(dk)){ev(v);A.vRisk[v].dup++;A.vRisk[v].issues++;A.edges.push({type:'Duplicate',invoice:li.invoice_id,vendor:v,item:li.item_name,detail:'Same item+qty billed twice on this invoice'})}
+    else seen.add(dk);
+
+    if(!rate){ev(v);A.vRisk[v].issues++;A.edges.push({type:'Missing Rate',invoice:li.invoice_id,vendor:v,item:li.item_name,detail:'No contracted rate found'});continue}
+
+    // price
+    const exp=rate.contracted_rate*li.quantity;
+    const diff=li.billed_amount-exp;
+    const pct=(diff/exp)*100;
+    if(Math.abs(pct)>0.5){
+      if(diff>0){A.totalOvercharge+=diff;A.vOver[v]=(A.vOver[v]||0)+diff;ev(v);A.vRisk[v].pf++;A.vRisk[v].over+=diff;A.vRisk[v].issues++}
+      A.disc.push({invoice_id:li.invoice_id,vendor:v,item:li.item_name,qty:li.quantity,billed_rate:li.unit_price,contracted_rate:rate.contracted_rate,diff_pct:pct,diff_amt:diff});
+    }else{A.cleanCount++}
+
+    // gst
+    if(li.billed_gst_rate!==rate.correct_gst_rate){
+      A.gstErrors++;ev(v);A.vRisk[v].ge++;A.vRisk[v].issues++;
+      const extra=li.billed_amount*(li.billed_gst_rate-rate.correct_gst_rate)/100;
+      A.gstM.push({invoice_id:li.invoice_id,vendor:v,item:li.item_name,billed_gst:li.billed_gst_rate,correct_gst:rate.correct_gst_rate,billed_amount:li.billed_amount,extra_gst:extra});
+    }
+  }
+  Object.keys(A.vRisk).forEach(v=>{const n=A.vRisk[v].issues;A.vRisk[v].risk=n>20?'High':n>5?'Medium':'Low'});
+
+  if(A.totalOvercharge>1e6)A.alerts.push({t:'danger',m:`Critical: Total overcharge is ${R(A.totalOvercharge)} — immediate review required`});
+  else if(A.totalOvercharge>1e5)A.alerts.push({t:'danger',m:`High leakage: ${R(A.totalOvercharge)} overcharged across vendors`});
+  if(A.gstErrors>3)A.alerts.push({t:'danger',m:`${A.gstErrors} GST mismatches detected — potential tax compliance risk`});
+  const hi=Object.entries(A.vRisk).filter(([,v])=>v.risk==='High').map(([n])=>n);
+  if(hi.length)A.alerts.push({t:'danger',m:`High-risk vendors: ${hi.join(', ')}`});
+  const dups=A.edges.filter(e=>e.type==='Duplicate').length;
+  if(dups)A.alerts.push({t:'warning',m:`${dups} duplicate billing entries detected`});
+  return A;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AI ANOMALY DETECTION
+═══════════════════════════════════════════════════════════ */
+function anomalies(lineItems,invoices){
+  const im={};invoices.forEach(i=>{im[i.invoice_id]=i});
+  const bv={};
+  lineItems.forEach(li=>{
+    const v=im[li.invoice_id]?im[li.invoice_id].vendor_name:li.vendor_id;
+    if(!bv[v])bv[v]=[];
+    bv[v].push({amount:li.billed_amount,invoice:li.invoice_id,item:li.item_name});
+  });
+  const out=[];
+  Object.entries(bv).forEach(([vendor,entries])=>{
+    if(entries.length<3)return;
+    const vals=entries.map(e=>e.amount);
+    const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+    const std=Math.sqrt(vals.reduce((s,v)=>s+Math.pow(v-mean,2),0)/vals.length);
+    if(std===0)return;
+    entries.forEach(e=>{
+      const z=(e.amount-mean)/std;
+      if(Math.abs(z)>2.5)out.push({vendor,invoice:e.invoice,item:e.item,value:e.amount,mean,z:z.toFixed(2)});
+    });
+  });
+  return out.sort((a,b)=>Math.abs(b.z)-Math.abs(a.z));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════════ */
+const titles={summary:'Summary',alerts:'Alerts',overcharges:'Overcharges',gst:'GST Errors',risk:'Vendor Risk',edge:'Edge Cases',ai:'AI Anomalies',vendors:'Vendor Detail',slabs:'GST Slabs'};
+function go(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('on'));
+  document.getElementById('pg-'+name).classList.add('on');
+  document.getElementById('nav-'+name)&&document.getElementById('nav-'+name).classList.add('on');
+  document.getElementById('page-title').textContent=titles[name]||name;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════════════════ */
+function render(invoices,lineItems,rateCard,isDemo){
+  const A=audit(invoices,lineItems,rateCard);
+  const AN=anomalies(lineItems,invoices);
+  AN.slice(0,5).forEach(a=>A.alerts.push({t:'ai',m:`${a.vendor} — unusual billing ${R(a.value)} on ${a.invoice} (Z=${a.z})`}));
+
+  // KPIs
+  const dups=A.edges.filter(e=>e.type==='Duplicate').length;
+  const totalBilled=invoices.reduce((s,i)=>s+i.total,0);
+  document.getElementById('kpi-row').innerHTML=`
+    <div class="kpi red"><div class="kpi-top"><span class="kpi-lbl">Total overcharge</span><div class="kpi-ico">▲</div></div><div class="kpi-val">${R(A.totalOvercharge)}</div><div class="kpi-sub">Across ${Object.keys(A.vOver).length} vendors</div></div>
+    <div class="kpi amber"><div class="kpi-top"><span class="kpi-lbl">GST mismatches</span><div class="kpi-ico">◐</div></div><div class="kpi-val">${A.gstErrors}</div><div class="kpi-sub">Wrong GST rate billed</div></div>
+    <div class="kpi blue"><div class="kpi-top"><span class="kpi-lbl">Total invoices</span><div class="kpi-ico">◈</div></div><div class="kpi-val">${invoices.length}</div><div class="kpi-sub">Total value: ${R(totalBilled)}</div></div>
+    <div class="kpi green"><div class="kpi-top"><span class="kpi-lbl">Clean lines</span><div class="kpi-ico">✓</div></div><div class="kpi-val">${A.cleanCount}</div><div class="kpi-sub">${lineItems.length>0?((A.cleanCount/lineItems.length)*100).toFixed(1):0}% of all lines</div></div>
+    <div class="kpi red"><div class="kpi-top"><span class="kpi-lbl">Duplicates</span><div class="kpi-ico">◉</div></div><div class="kpi-val">${dups}</div><div class="kpi-sub">Same item billed twice</div></div>
+    <div class="kpi purple"><div class="kpi-top"><span class="kpi-lbl">AI anomalies</span><div class="kpi-ico">✦</div></div><div class="kpi-val">${AN.length}</div><div class="kpi-sub">Z-score outliers (&gt;2.5σ)</div></div>`;
+
+  // Bar chart
+  const sv=Object.entries(A.vOver).sort((a,b)=>b[1]-a[1]);
+  const mx=sv[0]?.[1]||1;
+  document.getElementById('bar-chart').innerHTML=sv.length?'<div class="bar-chart">'+sv.map(([v,a])=>`
+    <div class="bar-row"><div class="bar-lbl" title="${v}">${v}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${(a/mx*100).toFixed(1)}%"></div></div>
+    <div class="bar-amt">${R(a)}</div></div>`).join('')+'</div>':'<div class="empty">No price overcharges found in this dataset</div>';
+
+  // Alerts
+  const alertIcons={danger:'!',warning:'⚠',ai:'✦'};
+  const ab=document.getElementById('alert-badge');
+  if(A.alerts.length){ab.textContent=A.alerts.length;ab.style.display='inline'}
+  document.getElementById('alerts-body').innerHTML=A.alerts.length
+    ?A.alerts.map(a=>`<div class="alert ${a.t}"><span class="alert-icon">${alertIcons[a.t]||'!'}</span><span>${a.m}</span></div>`).join('')
+    :'<div class="empty">No alerts — billing looks clean</div>';
+
+  // Summary tables
+  const topDisc=A.disc.filter(d=>d.diff_amt>0).sort((a,b)=>b.diff_amt-a.diff_amt).slice(0,8);
+  document.getElementById('disc-mini').innerHTML=topDisc.map(d=>`<tr>
+    <td class="mono">${d.invoice_id}</td><td>${d.vendor}</td><td>${d.item}</td>
+    <td style="color:var(--red);font-weight:600">+${d.diff_pct.toFixed(1)}%</td>
+    <td><span class="b over">Over</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">None found</td></tr>';
+  document.getElementById('gst-mini').innerHTML=A.gstM.slice(0,8).map(g=>`<tr>
+    <td class="mono">${g.invoice_id}</td><td>${g.vendor}</td><td>${g.item}</td>
+    <td><span class="b gst">${g.billed_gst}%</span></td>
+    <td><span class="b ok">${g.correct_gst}%</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">None found</td></tr>';
+
+  // Overcharges full
+  document.getElementById('cnt-over').textContent=A.disc.filter(d=>d.diff_amt>0).length+' items';
+  document.getElementById('over-body').innerHTML=A.disc.filter(d=>d.diff_amt>0).sort((a,b)=>b.diff_amt-a.diff_amt).map(d=>`<tr>
+    <td class="mono">${d.invoice_id}</td><td>${d.vendor}</td><td>${d.item}</td><td>${d.qty}</td>
+    <td>${Rf(d.billed_rate)}</td><td>${Rf(d.contracted_rate)}</td>
+    <td style="color:var(--red);font-weight:600">+${d.diff_pct.toFixed(1)}%</td>
+    <td style="color:var(--red);font-weight:600">${R(d.diff_amt)}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">No overcharges</td></tr>';
+
+  // GST full
+  document.getElementById('cnt-gst').textContent=A.gstM.length+' items';
+  document.getElementById('gst-body').innerHTML=A.gstM.map(g=>`<tr>
+    <td class="mono">${g.invoice_id}</td><td>${g.vendor}</td><td>${g.item}</td>
+    <td><span class="b gst">${g.billed_gst}%</span></td>
+    <td><span class="b ok">${g.correct_gst}%</span></td>
+    <td>${R(g.billed_amount)}</td>
+    <td style="color:${g.extra_gst>0?'var(--red)':'var(--green)'};font-weight:600">${g.extra_gst>0?'+':''}${R(g.extra_gst)}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">No GST errors</td></tr>';
+
+  // Risk
+  document.getElementById('risk-body').innerHTML=Object.entries(A.vRisk).sort((a,b)=>b[1].issues-a[1].issues).map(([v,d])=>`<tr>
+    <td style="font-weight:500">${v}</td><td style="font-weight:600">${d.issues}</td>
+    <td>${d.pf}</td><td>${d.ge}</td><td>${d.dup}</td>
+    <td>${d.over>0?`<span style="color:var(--red);font-weight:600">${R(d.over)}</span>`:'—'}</td>
+    <td><span class="r${d.risk[0]}">${d.risk}</span></td></tr>`).join('');
+
+  // Edge
+  document.getElementById('cnt-edge').textContent=A.edges.length+' items';
+  document.getElementById('edge-body').innerHTML=A.edges.length
+    ?A.edges.slice(0,100).map(e=>`<tr>
+      <td><span class="b edge">${e.type}</span></td>
+      <td class="mono">${e.invoice}</td><td>${e.vendor}</td><td>${e.item||'—'}</td>
+      <td style="color:var(--muted);font-size:12px">${e.detail}</td></tr>`).join('')
+    :'<tr><td colspan="5" class="empty">No edge cases detected</td></tr>';
+
+  // AI
+  document.getElementById('cnt-ai').textContent=AN.length+' anomalies';
+  document.getElementById('ai-body').innerHTML=AN.length
+    ?AN.slice(0,50).map(a=>`<tr>
+      <td style="font-weight:500">${a.vendor}</td>
+      <td class="mono">${a.invoice}</td><td>${a.item}</td>
+      <td style="color:var(--red);font-weight:600">${R(a.value)}</td>
+      <td style="color:var(--muted)">${R(a.mean)}</td>
+      <td style="color:${Math.abs(a.z)>3?'var(--red)':'var(--amber)'};font-weight:600">${a.z}</td>
+      <td><span class="b ai">Anomaly</span></td></tr>`).join('')
+    :'<tr><td colspan="7" class="empty">No anomalies detected</td></tr>';
+
+  // Vendor tabs
+  const vendors=[...new Set(invoices.map(i=>i.vendor_name))].sort();
+  const vt=document.getElementById('vtabs');
+  const vp=document.getElementById('vpanes');
+  vt.innerHTML='';vp.innerHTML='';
+  vendors.forEach((v,i)=>{
+    const btn=document.createElement('button');
+    btn.className='vtab'+(i===0?' on':'');btn.textContent=v;
+    btn.onclick=()=>{document.querySelectorAll('.vtab').forEach(b=>b.classList.remove('on'));document.querySelectorAll('.vpane').forEach(p=>p.classList.remove('on'));btn.classList.add('on');document.getElementById('vp-'+i).classList.add('on')};
+    vt.appendChild(btn);
+    const vi=invoices.filter(x=>x.vendor_name===v);
+    const tot=vi.reduce((s,x)=>s+x.total,0);
+    const ov=A.vOver[v]||0;const ge=A.gstM.filter(g=>g.vendor===v).length;const rk=A.vRisk[v]||{risk:'Low'};
+    const pane=document.createElement('div');
+    pane.className='vpane'+(i===0?' on':'');pane.id='vp-'+i;
+    pane.innerHTML=`<div class="mini-row">
+      <div class="mini"><div class="mini-lbl">Invoices</div><div class="mini-val">${vi.length}</div></div>
+      <div class="mini"><div class="mini-lbl">Total billed</div><div class="mini-val" style="color:var(--blue)">${R(tot)}</div></div>
+      <div class="mini"><div class="mini-lbl">Overcharge</div><div class="mini-val" style="color:${ov>0?'var(--red)':'var(--green)'}">${R(ov)}</div></div>
+      <div class="mini"><div class="mini-lbl">GST errors</div><div class="mini-val" style="color:${ge>0?'var(--amber)':'var(--green)'}">${ge}</div></div>
+      <div class="mini"><div class="mini-lbl">Risk</div><div class="mini-val r${rk.risk[0]}">${rk.risk}</div></div>
+    </div>
+    <div class="tw"><table><thead><tr><th>Invoice ID</th><th>Date</th><th>Subtotal</th><th>GST</th><th>Total</th><th>Terms</th></tr></thead>
+    <tbody>${vi.slice(0,50).map(x=>`<tr><td class="mono">${x.invoice_id}</td><td>${x.invoice_date}</td><td>${R(x.subtotal)}</td><td style="color:var(--amber)">${R(x.gst_amount)}</td><td style="font-weight:600">${R(x.total)}</td><td style="color:var(--muted)">${x.payment_terms}</td></tr>`).join('')}</tbody></table>
+    ${vi.length>50?`<div style="padding:10px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)">Showing 50 of ${vi.length}</div>`:''}</div>`;
+    vp.appendChild(pane);
+  });
+
+  // GST Slabs
+  const sc={},se={};
+  lineItems.forEach(li=>{sc[li.billed_gst_rate]=(sc[li.billed_gst_rate]||0)+1});
+  A.gstM.forEach(g=>{se[g.billed_gst]=(se[g.billed_gst]||0)+1});
+  const slabs=[...new Set([...Object.keys(sc),...Object.keys(se)])].map(Number).sort((a,b)=>a-b);
+  document.getElementById('slab-grid').innerHTML=slabs.map(s=>{
+    const cnt=sc[s]||0,err=se[s]||0;
+    return`<div class="slab"><div class="slab-pct">${s}%</div><div class="slab-cnt">${cnt.toLocaleString()} line items</div><div class="slab-status ${err>0?'err':'ok'}">${err>0?'⚠ '+err+' errors':'✓ No errors'}</div></div>`;
+  }).join('');
+
+  // Status bar
+  const note=isDemo?'Sample data':'Live data · '+invoices.length+' invoices, '+lineItems.length+' lines';
+  document.getElementById('stext').textContent=note;
+  document.getElementById('sdot').className='sdot'+(isDemo?' demo':'');
+  document.getElementById('data-note').style.display=isDemo?'':'none';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIVE API FETCH (parallel batching)
+═══════════════════════════════════════════════════════════ */
+const BASE='https://mosaicfellowship.in/api/data/finance';
+let fetchAborted=false;
+
+function cancelFetch(){fetchAborted=true;document.getElementById('fetch-modal').classList.remove('show')}
+
+async function pFetch(url,label){
+  const first=await fetch(url+'?page=1&limit=100').then(r=>r.json());
+  const tp=first.pagination.total_pages;
+  let all=[...first.data];
+  document.getElementById('flbl').textContent=`${label} — 1/${tp}`;
+  if(tp>1){
+    const BATCH=20;
+    for(let s=2;s<=tp&&!fetchAborted;s+=BATCH){
+      const e=Math.min(s+BATCH-1,tp);
+      const res=await Promise.all(Array.from({length:e-s+1},(_,i)=>fetch(`${url}?page=${s+i}&limit=100`).then(r=>r.json())));
+      res.forEach(r=>{if(r.data)all=all.concat(r.data)});
+      const pct=Math.round(e/tp*100);
+      document.getElementById('flbl').textContent=`${label} — ${e}/${tp} (${pct}%)`;
+      document.getElementById('fpb').style.width=pct+'%';
+    }
+  }
+  return all;
+}
+
+async function loadLive(){
+  fetchAborted=false;
+  document.getElementById('fetch-modal').classList.add('show');
+  document.getElementById('api-btn').classList.add('loading');
+  document.getElementById('api-btn').textContent='Loading...';
+  try{
+    document.getElementById('fpb').style.width='5%';
+    document.getElementById('flbl').textContent='Fetching invoices...';
+    const inv=await pFetch(BASE+'/invoices','Invoices');
+    document.getElementById('fpb').style.width='30%';
+    const li=await pFetch(BASE+'/line-items','Line items');
+    document.getElementById('fpb').style.width='85%';
+    const rc=await pFetch(BASE+'/rate-card','Rate card');
+    document.getElementById('fpb').style.width='100%';
+    document.getElementById('fetch-modal').classList.remove('show');
+    if(!fetchAborted){
+      render(inv,li,rc,false);
+      document.getElementById('api-btn').textContent='Live data loaded';
+      document.getElementById('api-btn').style.color='var(--green)';
+      document.getElementById('api-btn').style.borderColor='var(--green-bd)';
+    }
+  }catch(err){
+    document.getElementById('fetch-modal').classList.remove('show');
+    document.getElementById('api-btn').classList.remove('loading');
+    document.getElementById('api-btn').textContent='Load Live Data';
+    alert('API error: '+err.message+'\n\nThis usually means a CORS restriction when opening as a local file.\nTo fix: serve through VS Code Live Server or run:\n  python -m http.server 8080\nthen open localhost:8080');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BOOT — runs immediately, no API needed
+═══════════════════════════════════════════════════════════ */
+render(S_INV, S_LI, S_RC, true);
+</script>
+</body>
+</html>
